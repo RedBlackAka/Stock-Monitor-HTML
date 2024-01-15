@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stock Monitor</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const apiKey = 'API_KEY';
+      const ticker = 'NVDA';
+      const apiUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${ticker}&interval=1min&apikey=${apiKey}`;
+
+      // Function to fetch and update stock data
+      const fetchAndRenderStockData = async () => {
+        try {
+          const response = await fetch(apiUrl);
+          const data = await response.json();
+
+          // Extracting the historical stock prices
+          const timeSeries = data['Time Series (1min)'];
+          const labels = Object.keys(timeSeries).reverse(); // Reverse to display in chronological order
+          const prices = labels.map(label => parseFloat(timeSeries[label]['4. close']));
+          const highs = labels.map(label => parseFloat(timeSeries[label]['2. high']));
+          const lows = labels.map(label => parseFloat(timeSeries[label]['3. low']));
+
+          // Displaying the latest stock price on the HTML page
+          document.getElementById('ticker').textContent = `${ticker}`;
+          document.getElementById('latest').textContent = `$${prices[0]}`;
+          document.getElementById(`high`).textContent = `$${Math.max(...highs).toFixed(3)}`;
+          document.getElementById(`low`).textContent = `$${Math.min(...lows).toFixed(3)}`;
+
+          // Updating the chart data
+          const chart = window.myLine;
+          chart.data.labels = labels;
+          chart.data.datasets[0].data = prices;
+          chart.update();
+        } catch (error) {
+          console.error('Error fetching stock data:', error);
+        }
+      };
+
+      // Initial fetch and render
+      fetchAndRenderStockData();
+
+      // Set interval to update every hour
+      setInterval(fetchAndRenderStockData, 3600000);
+
+      // Creating a chart using Chart.js
+      const ctx = document.getElementById('stockChart').getContext('2d');
+      window.myLine = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [{
+            label: 'Stock Prices',
+            borderColor: '#eb052b',
+            data: [],
+          }],
+        },
+      });
+
+      // Function to update the real-time clock
+      const updateClock = () => {
+        const now = new Date();
+        const hours = now.getHours().toString().padStart(2, '0');
+        const minutes = now.getMinutes().toString().padStart(2, '0');
+        const seconds = now.getSeconds().toString().padStart(2, '0');
+        const formattedTime = `${hours}:${minutes}:${seconds}`;
+        document.getElementById('clock').textContent = formattedTime;
+      };
+
+      // Function to synchronize the clock with Google's time server
+      const syncWithGoogleTime = async () => {
+        try {
+          const response = await fetch('https://www.googleapis.com');
+          const serverTime = new Date(response.headers.get('date'));
+          // Set the local clock to the synchronized server time
+          updateClock(serverTime);
+        } catch (error) {
+          console.error('Error syncing with Google Time Server:', error);
+        }
+      };
+
+      // Initial call to update the clock
+      updateClock();
+
+      // Set interval to update the clock every second
+      setInterval(updateClock, 1000);
+
+      // Set interval to sync with Google's time server every hour
+      setInterval(syncWithGoogleTime, 3600000);
+    });
+  </script>
+  <style>
+    body {
+      background-color: #000;
+      font-family: verdana;
+      margin: 20px;
+    }
+    h1, h3, p {
+      color: #fff;
+    }
+    h3 {
+      float: right;
+    }
+    #chartContainer {
+      background-color: #151515;
+      width: 800px;
+      height: 400px;
+    }
+  </style>
+</head>
+<body>
+  <h3><span id="clock"></span></h3>
+  <h1>Stock Monitor</h1>
+  <p>Ticker: <span id="ticker">Loading...</span></p>
+  <p>Latest Price: <span id="latest">$0.000</span></p>
+  <p>High: <span id="high">$0.000</span></p>
+  <p>Low: <span id="low">$0.000</span></p>
+  <div id="chartContainer">
+    <canvas id="stockChart"></canvas>
+  </div>
+</body>
+</html>
