@@ -1,0 +1,16 @@
+body {
+  background-color: #000;
+  font-family: verdana;
+  margin: 20px;
+}
+h1, h3, p {
+  color: #fff;
+}
+h3 {
+  float: right;
+}
+#chartContainer {
+  background-color: #151515;
+  width: 800px;
+  height: 400px;
+}
